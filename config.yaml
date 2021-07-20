@@ -1,6 +1,6 @@
 height: 500
 width: 500
-crops_per_image: 100
+crops_per_image: 30
 # height:
 #   desc: Supposed to be the average of the height of a character of a dataset
 #   value: 500
