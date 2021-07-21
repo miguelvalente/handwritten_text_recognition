@@ -21,54 +21,59 @@ def crop(config):
             cropped_img = croper(img)
             save_image(cropped_img, f'data/crops_30/crop_{idx}_{i}.jpg')
 
-def s_score(img_a1, imgs):
-    ''' Calculates s score according'''
+def s_score(imgs, write=False):
+    ''' Calculates s score
+        Inputs:
+         - imgs: dataset
+        returns: a darray with all the scores
+    '''
 
     lower_val = np.array([0, 0, 0])
     upper_val = np.array([100, 100, 100])
 
-    img_a1 = np.array(img_a1)
-    mask = cv2.inRange(img_a1, lower_val, upper_val)
-    fg_pixels_a1 = mask[mask != 0].shape[0]
-    # bg_pixels_a1 = mask[mask == 0].shape[0]
-
-    scores = []
-    for img_a2 in imgs:
+    fg_pixels_a2 = []
+    bg_pixels = []
+    for img_a2 in tqdm(imgs, desc='Calculating Imgs Pixels'):
         img_a2 = np.array(img_a2)
         mask = cv2.inRange(img_a2, lower_val, upper_val)
-        fg_pixels_a2 = mask[mask != 0].shape[0]
-        # bg_pixels_a2 = mask[mask == 0].shape[0]
-        score = np.min([fg_pixels_a1, fg_pixels_a2]) / np.max([fg_pixels_a1, fg_pixels_a2])
+        fg_pixels_a2.append(mask[mask != 0].shape[0])
+        bg_pixels = mask[mask == 0].shape[0]
 
-        scores.append(0 if np.isnan(score) else round(score, 2))
+    mins = []
+    maxs = []
+    for fg_pixel_a1 in tqdm(fg_pixels_a2, desc='Calculating Max and Min'):
+        mins.append(np.minimum(fg_pixel_a1, fg_pixels_a2))
+        maxs.append(np.maximum(fg_pixel_a1, fg_pixels_a2))
 
-    return scores
+    scores = np.round(np.stack(mins) / np.stack(maxs), 2)
+    scores[np.isnan(scores)] = 0
 
+    if write:
+        with open('crops_30_2.txt', 'w') as file:
+            for line in scores:
+                file.write(','.join([str(i) for i in line]))
+                file.write('\n')
 
-def calculate_scores(config):
+    return scores, bg_pixels
+
+def main(config, write=False):
     transform = transforms.Compose([transforms.Grayscale(num_output_channels=1)])
     crops = Crops(path='data/crops_30', transform=None)
 
     lower_val = np.array([0, 0, 0])
     upper_val = np.array([100, 100, 100])
 
-    all_scores = []
-    for crop in tqdm(crops, desc='Calculating Scores'):
-        all_scores.append(s_score(crop, crops))
+    scores, _ = s_score(crops)
 
-    with open('year.txt', 'w') as file:
-        for scores in all_scores:
-            file.write(f'{scores}')
+    similar_by_fg = np.argwhere(scores >= 0.7)
+    different_by_fg = np.argwhere(scores <= 0.4)
 
-    # img = np.array(crops[2])
-    # mask = cv2.inRange(img, lower_val, upper_val)
-    # plt.imshow(mask)
-    # plt.show()
     print()
+
 
 if __name__ == "__main__":
     with open('config.yaml') as file:
         config = yaml.load(file, Loader=yaml.FullLoader)
 
-    crop(config)
-    calculate_scores(config)
+    # crop(config)
+    main(config)
