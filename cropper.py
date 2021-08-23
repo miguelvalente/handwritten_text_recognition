@@ -58,7 +58,8 @@ def s_score(imgs, write=False):
 
 def main(config, write=False):
     transform = transforms.Compose([transforms.Grayscale(num_output_channels=1)])
-    crops = Crops(path='data/crops_30', transform=None)
+    path = 'data/crops_30'
+    crops = Crops(path=path, transform=None)
 
     lower_val = np.array([0, 0, 0])
     upper_val = np.array([100, 100, 100])
@@ -68,7 +69,8 @@ def main(config, write=False):
     similar_by_fg = np.argwhere(scores >= 0.7)
     different_by_fg = np.argwhere(scores <= 0.4)
 
-    print()
+    np.savetxt(f'data/similar_by_fg.csv', similar_by_fg, delimiter=',', fmt="%i")
+    np.savetxt(f'data/different_by_fg.csv', different_by_fg, delimiter=',', fmt="%i")
 
 
 if __name__ == "__main__":
