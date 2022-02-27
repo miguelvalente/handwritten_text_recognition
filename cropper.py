@@ -1,81 +1,113 @@
 import cv2
+import os
 import torchvision.transforms as transforms
 import yaml
 from torchvision.utils import save_image
+from torchvision.transforms.functional import to_tensor
 from tqdm import tqdm
+import torch 
 
 import matplotlib.pyplot as plt
 import numpy as np
 from dataset import Crops, Notebook
 from utils import Rotate
 
+class Cropper():
+    def __init__(self, config):
+        self.config = config
+        self.lower = np.array(config['lower_treshold'])
+        self.upper = np.array(config['upper_treshold'])
+        self.crops_per_img = config['crops_per_img']
+        self.height = config['width']
+        self.width = config['width']
 
-def crop(config):
-    transform = transforms.Compose([transforms.ToTensor(), Rotate()])
-    croper = transforms.RandomCrop(size=(config['height'], config['width']))
+    def crop(self, save_crops=True):
+        '''
+            Keeps Cropping until the foreground pixels are above 6000
+            6000 was a the value selcted for this "toy dataset" looking at crops with no text in it
+            essentially makes sure that its not saving white space crrops
+            To find values for anotehr use case False to save_crops
+        '''
+        transform = transforms.Compose([transforms.ToTensor(), Rotate()])
+        croper = transforms.RandomCrop(size=(self.height, self.width))
 
-    notebook = Notebook(path='data/notebook', transform=transform)
-    crops = []
-    for idx, img in enumerate(tqdm(notebook, desc='Reading Imgs')):
-        for i in range(config['crops_per_image']):
-            cropped_img = croper(img)
-            save_image(cropped_img, f'data/crops_30/crop_{idx}_{i}.jpg')
+        notebook = Notebook(path='data/notebook', transform=transform)
 
-def s_score(imgs, write=False):
-    ''' Calculates s score
-        Inputs:
-         - imgs: dataset
-        returns: a darray with all the scores
-    '''
+        crops = []
+        for idx, img in enumerate(tqdm(notebook, desc='Reading Imgs')):
+            for i in range(self.crops_per_img):
+                cropped_img = np.array(croper(img))
+                mask = cv2.inRange(cropped_img, self.lower, self.upper)
+                fg_pixels = (mask[mask != 0].shape[0])
 
-    lower_val = np.array([0, 0, 0])
-    upper_val = np.array([100, 100, 100])
+                if fg_pixels < 6001:
+                    i -= 1
+                else:
+                    if save_crops:
+                        save_image(to_tensor(cropped_img), f'data/crops_{self.crops_per_img}/crop_{idx}_{i}.jpg')
+                    else:
+                        bg_pixels = mask[mask == 0].shape[0]
+                        print(f'Bg: {bg_pixels}   Fg: {fg_pixels[-1]}')
+                        cv2.imshow('Image', img)
+                        k = cv2.waitKey(0)
+                        if k == 27:    # Esc key to stop
+                            break
+                        else:
+                            continue
 
-    fg_pixels_a2 = []
-    bg_pixels = []
-    for img_a2 in tqdm(imgs, desc='Calculating Imgs Pixels'):
-        img_a2 = np.array(img_a2)
-        mask = cv2.inRange(img_a2, lower_val, upper_val)
-        fg_pixels_a2.append(mask[mask != 0].shape[0])
-        bg_pixels = mask[mask == 0].shape[0]
+    def s_score(self, imgs, write=False):
+        '''
+            Calculates s score
+            Inputs:
+            - imgs: dataset
+            returns: a darray with all the scores
+        '''
 
-    mins = []
-    maxs = []
-    for fg_pixel_a1 in tqdm(fg_pixels_a2, desc='Calculating Max and Min'):
-        mins.append(np.minimum(fg_pixel_a1, fg_pixels_a2))
-        maxs.append(np.maximum(fg_pixel_a1, fg_pixels_a2))
+        fg_pixels_a2 = []
+        for img in tqdm(imgs, desc='Calculating Imgs Pixels'):
+            img = np.array(img)
+            mask = cv2.inRange(img, self.lower, self.upper)
+            fg_pixels_a2.append(mask[mask != 0].shape[0])
 
-    scores = np.round(np.stack(mins) / np.stack(maxs), 2)
-    scores[np.isnan(scores)] = 0
+        mins = []
+        maxs = []
+        for fg_pixel_a1 in tqdm(fg_pixels_a2, desc='Calculating Max and Min'):
+            mins.append(np.minimum(fg_pixel_a1, fg_pixels_a2))
+            maxs.append(np.maximum(fg_pixel_a1, fg_pixels_a2))
 
-    if write:
-        with open('crops_30_2.txt', 'w') as file:
-            for line in scores:
-                file.write(','.join([str(i) for i in line]))
-                file.write('\n')
+        scores = np.round(np.stack(mins) / np.stack(maxs), 2)
+        scores[np.isnan(scores)] = 0
 
-    return scores, bg_pixels
+        if write:
+            with open(f"crops_{self.crops_per_imge}.txt", 'w') as file:
+                for line in scores:
+                    file.write(','.join([str(i) for i in line]))
+                    file.write('\n')
 
-def main(config, write=False):
-    transform = transforms.Compose([transforms.Grayscale(num_output_channels=1)])
-    path = 'data/crops_30'
-    crops = Crops(path=path, transform=None)
-
-    lower_val = np.array([0, 0, 0])
-    upper_val = np.array([100, 100, 100])
-
-    scores, _ = s_score(crops)
-
-    similar_by_fg = np.argwhere(scores >= 0.7)
-    different_by_fg = np.argwhere(scores <= 0.4)
-
-    np.savetxt(f'data/similar_by_fg.csv', similar_by_fg, delimiter=',', fmt="%i")
-    np.savetxt(f'data/different_by_fg.csv', different_by_fg, delimiter=',', fmt="%i")
+        return scores
 
 
 if __name__ == "__main__":
     with open('config.yaml') as file:
         config = yaml.load(file, Loader=yaml.FullLoader)
 
-    # crop(config)
-    main(config)
+    cropper = Cropper(config)
+
+    # Crops based on amount of "crops_per_image" or if dir empty due to an error
+    if not os.path.exists(f'data/crops_{cropper.crops_per_img}'):
+        os.makedirs(f'data/crops_{cropper.crops_per_img}')
+        cropper.crop()
+    elif len(os.listdir(path=f'data/crops_{cropper.crops_per_img}')) == 0:
+        cropper.crop()
+
+    crops = Crops(path=f'data/crops_{cropper.crops_per_img}')
+    # crops = Crops(path=f'data/crops_{cropper.crops_per_img}',
+                #   transform=transforms.Compose([transforms.Grayscale(num_output_channels=1)]))
+
+    scores = cropper.s_score(crops)
+
+    similar_by_fg = np.argwhere(scores >= 0.7)
+    different_by_fg = np.argwhere(scores <= 0.4)
+
+    np.savetxt(f'data/crops_{cropper.crops_per_img}/similar_by_fg.csv', similar_by_fg, delimiter=',', fmt="%i")
+    np.savetxt(f'data/crops_{cropper.crops_per_img}/different_by_fg.csv', different_by_fg, delimiter=',', fmt="%i")

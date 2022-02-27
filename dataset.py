@@ -2,6 +2,7 @@ import os
 import random
 from pathlib import Path
 
+import torchvision.transforms as transforms
 from torch.utils.data import Dataset
 from torchvision.datasets.folder import default_loader
 
@@ -12,6 +13,7 @@ class Notebook(Dataset):
         self.path = path
         self.loader = default_loader
         self.transform = transform
+        self.transform = transforms.Compose([transforms.Grayscale(num_output_channels=3)])
 
         try:
             self._load_data()
@@ -46,6 +48,8 @@ class Crops(Dataset):
         except Exception:
             return False
 
+        print()
+
     def __len__(self):
         return len(self.data)
 
@@ -67,6 +71,4 @@ class Crops(Dataset):
     def _load_data(self):
         self.data = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
         if self.pairs:
-            self.data = len(self.similar_by_fg)
-            self.crops = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
-
+            pass
