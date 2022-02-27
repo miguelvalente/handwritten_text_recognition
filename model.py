@@ -1,33 +1,48 @@
 import torch
 import torch.nn as nn
 
-class Network(nn.Module):
-    def __init__(self, input_dim):
-        self.input_dim = input_dim 
+def conv_block(in_f, out_f, *args, **kwargs):
+    return nn.Sequential(
+        nn.Conv2d(in_f, out_f, *args, **kwargs),
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+    )
 
-        self.conv_1 = nn.Conv2D(input_dim, 64, kernel_size=5)
-        self.pool = nn.MaxPool2d(2)
-        self.conv_2 = nn.Conv2D(input_dim, 128, kernel_size=5)
-        self.conv_3 = nn.Conv2D(input_dim, 256, kernel_size=3)
-        self.conv_4 = nn.Conv2D(input_dim, 512, kernel_size=3)
-        self.conv_5 = nn.Conv2D(input_dim, 512, kernel_size=3)
+class Siamese(nn.Module):
+    def __init__(self, n_channels):
 
+        super().__init__()
+        self.conv = nn.Sequential(
+            conv_block(n_channels, 64, 5, padding='same'),
+            conv_block(64, 128, 5, padding='same'),
+            conv_block(128, 256, 3, padding='same'),
+            nn.Conv2d(256, 512, 3, padding='same'),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, 3, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Flatten(),
+            nn.Linear(41472, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+        )
 
+        self.fcs = nn.Sequential(
+            nn.Linear(1024, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 1),
+            nn.Sigmoid()
+        )
 
-        self.non_linearity = nn.ReLU()
+    def forward(self, x1, x2):
+        x1 = self.conv(x1)
+        x2 = self.conv(x2)
+        return self.fcs(torch.cat((x1, x2), dim=1))
 
-        conv_3=Conv2D(256,(3,3),padding="same",activation='relu',name='conv_3')(conv_2)
-        conv_3=MaxPooling2D(pool_size=(2, 2))(conv_3)
-        conv_4=Conv2D(512,(3,3),padding="same",activation='relu',name='conv_4')(conv_3)
-        conv_5=Conv2D(512,(3,3),padding="same",activation='relu',name='conv_5')(conv_4)
-        conv_5=MaxPooling2D(pool_size=(2, 2))(conv_5)
-    
-        dense_1=Flatten()(conv_5)
-        dense_1=Dense(512,activation="relu")(dense_1)
-        dense_1=Dropout(0.5)(dense_1)
-        dense_2=Dense(512,activation="relu")(dense_1)
-        dense_2=Dropout(0.5)(dense_2)
-        return Model(inputs, dense_2)
-
-    def forward(self):
-        pass
+if __name__ == '__main__':
+    siam = Siamese(3)
+    input = torch.randn(20, 3, 150, 150)
+    siam(input, input)

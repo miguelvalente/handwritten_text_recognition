@@ -1,5 +1,5 @@
 import torch
-from model import Network
+from model import Siamese
 import numpy as np
 import torchvision.transforms as transforms
 from dataset import Crops
@@ -21,3 +21,5 @@ pairs = (1, 2)
 crops = Crops(path=path, pairs=pairs)
 
 train_loader = torch.utils.data.DataLoader(crops, batch_size=64, shuffle=True, pin_memory=True)
+
+print()
