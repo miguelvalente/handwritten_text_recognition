@@ -20,14 +20,16 @@ class Cropper():
         self.crops_per_img = config['crops_per_img']
         self.height = config['width']
         self.width = config['width']
+        self.path = f"data/{config['folder_name']}_{config['crops_per_img']}"
 
-    def crop(self, save_crops=True):
+    def crop(self, show_img=False):
         '''
-            Keeps Cropping until the foreground pixels are above 6000
+            Keeps Cropping until the foreground pixels are above 6000 if 500by500; 2000 if 250by250
             6000 was a the value selcted for this "toy dataset" looking at crops with no text in it
             essentially makes sure that its not saving white space crrops
             To find values for anotehr use case False to save_crops
         '''
+        fg_tresh = 2000
         transform = transforms.Compose([transforms.ToTensor(), Rotate()])
         croper = transforms.RandomCrop(size=(self.height, self.width))
 
@@ -40,20 +42,20 @@ class Cropper():
                 mask = cv2.inRange(cropped_img, self.lower, self.upper)
                 fg_pixels = (mask[mask != 0].shape[0])
 
-                if fg_pixels < 6001:
-                    i -= 1
-                else:
-                    if save_crops:
-                        save_image(to_tensor(cropped_img), f'data/crops_{self.crops_per_img}/crop_{idx}_{i}.jpg')
+                if show_img:
+                    bg_pixels = mask[mask == 0].shape[0]
+                    print(f'Bg: {bg_pixels}   Fg: {fg_pixels}')
+                    cv2.imshow('Image', cropped_img)
+                    k = cv2.waitKey(0)
+                    if k == 27:    # Esc key to stop
+                        break
                     else:
-                        bg_pixels = mask[mask == 0].shape[0]
-                        print(f'Bg: {bg_pixels}   Fg: {fg_pixels[-1]}')
-                        cv2.imshow('Image', img)
-                        k = cv2.waitKey(0)
-                        if k == 27:    # Esc key to stop
-                            break
-                        else:
-                            continue
+                        continue
+                else:
+                    if fg_pixels < fg_tresh:
+                        i -= 1
+                    else:
+                        save_image(to_tensor(cropped_img), f'{self.path}/crop_{idx}_{i}.jpg')
 
     def s_score(self, imgs, write=False):
         '''
@@ -92,22 +94,21 @@ if __name__ == "__main__":
         config = yaml.load(file, Loader=yaml.FullLoader)
 
     cropper = Cropper(config)
+    path = f"data/{config['folder_name']}_{config['crops_per_img']}"
 
     # Crops based on amount of "crops_per_image" or if dir empty due to an error
-    if not os.path.exists(f'data/crops_{cropper.crops_per_img}'):
-        os.makedirs(f'data/crops_{cropper.crops_per_img}')
+    if not os.path.exists(path):
+        os.makedirs(path)
         cropper.crop()
-    elif len(os.listdir(path=f'data/crops_{cropper.crops_per_img}')) == 0:
+    elif len(os.listdir(path=path)) == 0:
         cropper.crop()
 
-    crops = Crops(path=f'data/crops_{cropper.crops_per_img}')
-    # crops = Crops(path=f'data/crops_{cropper.crops_per_img}',
-                #   transform=transforms.Compose([transforms.Grayscale(num_output_channels=1)]))
+    crops = Crops(path=path)
 
     scores = cropper.s_score(crops)
 
     similar_by_fg = np.argwhere(scores >= 0.7)
     different_by_fg = np.argwhere(scores <= 0.4)
 
-    np.savetxt(f'data/crops_{cropper.crops_per_img}/similar_by_fg.csv', similar_by_fg, delimiter=',', fmt="%i")
-    np.savetxt(f'data/crops_{cropper.crops_per_img}/different_by_fg.csv', different_by_fg, delimiter=',', fmt="%i")
+    np.savetxt(f'{path}/similar_by_fg.csv', similar_by_fg, delimiter=',', fmt="%i")
+    np.savetxt(f'{path}/different_by_fg.csv', different_by_fg, delimiter=',', fmt="%i")

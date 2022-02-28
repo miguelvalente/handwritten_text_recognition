@@ -4,6 +4,7 @@ from pathlib import Path
 
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset
+from torchvision.transforms.functional import to_tensor
 from torchvision.datasets.folder import default_loader
 
 
@@ -40,35 +41,29 @@ class Crops(Dataset):
         self.loader = default_loader
         self.transform = transform
         self.pairs = pairs
-        if pairs:
-            self.different_by_fg, self.similar_by_fg = pairs
 
         try:
-            self._load_data()
+            self._load_img_paths()
         except Exception:
             return False
-
-        print()
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        if self.pairs:
-            idx1, idx2, pair_type = self.data[idx]
-            img1 = self.loader(self.crops[idx1])
-            img2 = self.loader(self.crops[idx2])
+        if self.pairs is not None:
+            idx1, idx2, y = self.pairs[idx]
+            img1 = self.loader(self.data[idx1])
+            img2 = self.loader(self.data[idx2])
             if self.transform:
                 img1 = self.transform(img1)
                 img2 = self.transform(img2)
-            return img1, img2
+            return to_tensor(img1), to_tensor(img2), y
         else:
             img = self.loader(self.data[idx])
             if self.transform:
                 img = self.transform(img)
             return img
 
-    def _load_data(self):
+    def _load_img_paths(self):
         self.data = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
-        if self.pairs:
-            pass

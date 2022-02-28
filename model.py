@@ -10,8 +10,8 @@ def conv_block(in_f, out_f, *args, **kwargs):
 
 class Siamese(nn.Module):
     def __init__(self, n_channels):
-
-        super().__init__()
+        super(Siamese, self).__init__()
+        # super().__init__()
         self.conv = nn.Sequential(
             conv_block(n_channels, 64, 5, padding='same'),
             conv_block(64, 128, 5, padding='same'),
@@ -22,7 +22,7 @@ class Siamese(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2),
             nn.Flatten(),
-            nn.Linear(41472, 512),
+            nn.Linear(115200, 512),  # bad practice
             nn.ReLU(),
             nn.Linear(512, 512),
             nn.ReLU(),
@@ -33,14 +33,14 @@ class Siamese(nn.Module):
             nn.ReLU(),
             nn.Linear(1024, 1024),
             nn.ReLU(),
-            nn.Linear(1024, 1),
-            nn.Sigmoid()
+            nn.Linear(1024, 1)
+            # nn.Sigmoid() commented because using .nn.BCEWithLogitsLoss instead
         )
 
     def forward(self, x1, x2):
         x1 = self.conv(x1)
         x2 = self.conv(x2)
-        return self.fcs(torch.cat((x1, x2), dim=1))
+        return self.fcs(torch.cat((x1, x2), dim=1)).squeeze()
 
 if __name__ == '__main__':
     siam = Siamese(3)
