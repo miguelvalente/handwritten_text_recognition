@@ -15,3 +15,4 @@ Implementing [__Unsupervised deep learning for text line segmentation__](https:/
 - [ ] Plot on W&B
 - [ ] Line Detection
 
+<!-- PyTorch Implementation Siamese unsupervised learning OCR line detection-->
