@@ -1,0 +1,28 @@
+height:
+  desc:
+  value: 250
+width:
+  desc:
+  value: 250
+crops_per_img:
+  desc:
+  value: 10
+folder_name:
+  desc:
+  value: 'crops250by250'
+upper_treshold:
+  desc:
+  value: [100,100,100]
+lower_treshold:
+  desc:
+  value: [0,0,0]
+
+#Model
+batch_size: 2
+epochs: 10
+epochs:
+  desc: Number of epochs to train over
+  value: 10
+batch_size:
+  desc: Size of each mini-batch
+  value: 8

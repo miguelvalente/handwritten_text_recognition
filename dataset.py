@@ -48,7 +48,7 @@ class Crops(Dataset):
             return False
 
     def __len__(self):
-        return len(self.data)
+        return len(self.pairs)
 
     def __getitem__(self, idx):
         if self.pairs is not None:

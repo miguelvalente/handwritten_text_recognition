@@ -12,7 +12,8 @@ Implementing [__Unsupervised deep learning for text line segmentation__](https:/
 - [x] Cropper
 - [x] Siamese Network ([Converted from Keras](https://github.com/beratkurar/unsupervised_deep_learning_for_page_segmentation/blob/master/usiam_page.py))
 - [x] Working Train routine
-- [ ] Plot on W&B
-- [ ] Line Detection
+- [x] Validation and Accuracy 
+- [x] Plot on W&B
+- [ ] Blob Line Detection
 
 <!-- PyTorch Implementation Siamese unsupervised learning OCR line detection-->
