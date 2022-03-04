@@ -22,7 +22,7 @@ class Siamese(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2),
             nn.Flatten(),
-            nn.Linear(115200, 512),  # bad practice
+            nn.LazyLinear(512),
             nn.ReLU(),
             nn.Linear(512, 512),
             nn.ReLU(),
@@ -44,5 +44,5 @@ class Siamese(nn.Module):
 
 if __name__ == '__main__':
     siam = Siamese(3)
-    input = torch.randn(20, 3, 150, 150)
+    input = torch.randn(20, 3, 250, 250)
     siam(input, input)
