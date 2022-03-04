@@ -11,7 +11,7 @@ Implementing [__Unsupervised deep learning for text line segmentation__](https:/
 - [x] DataLoader 
 - [x] Cropper
 - [x] Siamese Network ([Converted from Keras](https://github.com/beratkurar/unsupervised_deep_learning_for_page_segmentation/blob/master/usiam_page.py))
-- [ ] Working Train routine
+- [x] Working Train routine
 - [ ] Plot on W&B
 - [ ] Line Detection
 
