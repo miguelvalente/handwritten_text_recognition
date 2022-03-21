@@ -9,7 +9,7 @@ import torchvision.transforms as transforms
 import yaml
 from tqdm import tqdm, trange
 from ignite.metrics import Accuracy
-jkk
+
 from dataset import Crops
 from model import Siamese
 
